@@ -74,24 +74,18 @@ To develop a modern TypeScript-based application providing powerful APIs for URL
       <td>2023 4Y</td>
       <td>Rohit Sharma</td>
       <td><a href="https://github.com/rohitsharma27011">rohitsharma27011</a></td>
-      <td><a>2023sl70009@wilp.bits-pilani.ac.in</a></td>
+      <td><a href="mailto:2023sl70009@wilp.bits-pilani.ac.in">2023sl70009@wilp.bits-pilani.ac.in</a></td>
     </tr>
 
     <tr>
       <td>2023SL70033</td>
       <td>2023 4Y</td>
       <td>Krish Bhardwaj</td>
-      <td><a href=>krish</a></td>
-      <td><a>2023sl70033@wilp.bits-pilani.ac.in</a></td>
+      <td><a href="https://github.com/krish">krish</a></td>
+      <td><a href="mailto:2023sl70033@wilp.bits-pilani.ac.in">2023sl70033@wilp.bits-pilani.ac.in</a></td>
     </tr>
 
     <tr>
       <td>2023SL70039</td>
-      <td>2023 4Y</td>
-      <td>Chandan pathak</td>
-      <td><a>Chandan</a></td>
-      <td><a>2023sl70037@wilp.bits-pilani.ac.in</a></td>
-    </tr>
-  </tbody>
-</table>
+
 
