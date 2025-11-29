@@ -54,3 +54,44 @@ To develop a modern TypeScript-based application providing powerful APIs for URL
   <li><strong>Analytics (Click Tracking) — Future</strong></li>
   <li><strong>Admin Controls — Future</strong></li>
 </ul>
+
+<h2><strong>👥 Team Members</strong></h2>
+
+<table>
+  <thead>
+    <tr>
+      <th><strong>BITS ID</strong></th>
+      <th><strong>Branch</strong></th>
+      <th><strong>Name</strong></th>
+      <th><strong>GitHub ID</strong></th>
+      <th><strong>Email</strong></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>2023SL70009</td>
+      <td>2023 4Y</td>
+      <td>Rohit Sharma</td>
+      <td><a href="https://github.com/rohitsharma27011">rohitsharma27011</a></td>
+      <td><a>2023sl70009@wilp.bits-pilani.ac.in</a></td>
+    </tr>
+
+    <tr>
+      <td>2023SL70033</td>
+      <td>2023 4Y</td>
+      <td>Krish Bhardwaj</td>
+      <td><a href=>krish</a></td>
+      <td><a>2023sl70033@wilp.bits-pilani.ac.in</a></td>
+    </tr>
+
+    <tr>
+      <td>2023SL70039</td>
+      <td>2023 4Y</td>
+      <td>Chandan pathak</td>
+      <td><a>Chandan</a></td>
+      <td><a>2023sl70037@wilp.bits-pilani.ac.in</a></td>
+    </tr>
+  </tbody>
+</table>
+
