@@ -94,6 +94,3 @@ To develop a modern TypeScript-based application providing powerful APIs for URL
     </tr>
   </tbody>
 </table>
-
-
-
