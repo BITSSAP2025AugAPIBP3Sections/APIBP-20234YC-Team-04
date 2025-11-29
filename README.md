@@ -87,5 +87,13 @@ To develop a modern TypeScript-based application providing powerful APIs for URL
 
     <tr>
       <td>2023SL70039</td>
+      <td>2023 4Y</td>
+      <td>Chandan Pathak</td>
+      <td><a href="https://github.com/Chandan">Chandan</a></td>
+      <td><a href="mailto:2023sl70039@wilp.bits-pilani.ac.in">2023sl70039@wilp.bits-pilani.ac.in</a></td>
+    </tr>
+  </tbody>
+</table>
+
 
 
