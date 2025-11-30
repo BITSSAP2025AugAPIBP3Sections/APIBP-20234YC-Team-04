@@ -1,4 +1,4 @@
-# 🚀 Linksnip – Short Links. Simple Sharing.
+# 🚀 LinkShrink – Short Links. Simple Sharing.
 
 ## 🌟 Project Description
 
