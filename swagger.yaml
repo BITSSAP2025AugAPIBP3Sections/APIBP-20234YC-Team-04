@@ -1,0 +1,438 @@
+openapi: 3.0.0
+info:
+  title: URL Shortener API
+  description: A simple URL shortener service with analytics and bulk operations
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.example.com
+    description: Production server
+
+paths:
+  /api/urls:
+    post:
+      summary: Create a new short URL
+      tags:
+        - URLs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - originalUrl
+              properties:
+                originalUrl:
+                  type: string
+                  format: uri
+                  description: The original URL to shorten
+                customCode:
+                  type: string
+                  pattern: '^[A-Za-z0-9_-]{3,20}$'
+                  description: Optional custom short code (3-20 alphanumeric characters)
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: Optional expiration date for the short URL
+              example:
+                originalUrl: https://www.example.com/very/long/url
+                customCode: mylink
+                expiresAt: 2025-12-31T23:59:59Z
+      responses:
+        '201':
+          description: Short URL created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/URL'
+        '400':
+          description: Invalid input or custom code already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: Retrieve all short URLs
+      tags:
+        - URLs
+      responses:
+        '200':
+          description: List of all short URLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/URL'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/urls/bulk:
+    post:
+      summary: Create multiple short URLs in bulk
+      tags:
+        - URLs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - urls
+              properties:
+                urls:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - originalUrl
+                    properties:
+                      originalUrl:
+                        type: string
+                        format: uri
+                      customCode:
+                        type: string
+                        pattern: '^[A-Za-z0-9_-]{3,20}$'
+                      expiresAt:
+                        type: string
+                        format: date-time
+              example:
+                urls:
+                  - originalUrl: https://example.com/page1
+                    customCode: page1
+                  - originalUrl: https://example.com/page2
+
+      responses:
+        '201':
+          description: Short URLs created successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/URL'
+        '400':
+          description: Invalid input or duplicate custom code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/urls/{id}:
+    get:
+      summary: Retrieve a specific short URL by ID
+      tags:
+        - URLs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The URL ID
+      responses:
+        '200':
+          description: URL details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/URL'
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete a short URL
+      tags:
+        - URLs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The URL ID
+      responses:
+        '204':
+          description: URL deleted successfully
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/urls/{id}/analytics:
+    get:
+      summary: Get analytics for a specific short URL
+      tags:
+        - Analytics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The URL ID
+      responses:
+        '200':
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analytics'
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/stats:
+    get:
+      summary: Get global statistics
+      tags:
+        - Statistics
+      responses:
+        '200':
+          description: Global statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/check-code/{code}:
+    get:
+      summary: Check if a custom code is available
+      tags:
+        - URLs
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{3,20}$'
+          description: The custom code to check
+      responses:
+        '200':
+          description: Availability status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available:
+                    type: boolean
+                    description: Whether the code is available
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/cleanup:
+    post:
+      summary: Clean up expired URLs
+      tags:
+        - Administration
+      responses:
+        '200':
+          description: Cleanup completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cleaned:
+                    type: integer
+                    description: Number of URLs cleaned up
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /{shortCode}:
+    get:
+      summary: Redirect to original URL using short code
+      tags:
+        - Redirection
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{3,20}$'
+          description: The short code
+      responses:
+        '301':
+          description: Permanent redirect to original URL
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The original URL to redirect to
+        '404':
+          description: Short code not found
+
+components:
+  schemas:
+    URL:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier
+        originalUrl:
+          type: string
+          format: uri
+          description: The original long URL
+        shortCode:
+          type: string
+          description: The generated or custom short code
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Expiration timestamp (if set)
+        clicks:
+          type: integer
+          description: Number of times the short URL was clicked
+      example:
+        id: "123e4567-e89b-12d3-a456-426614174000"
+        originalUrl: https://www.example.com/very/long/url
+        shortCode: mylink
+        createdAt: "2025-01-15T10:30:00Z"
+        expiresAt: "2025-12-31T23:59:59Z"
+        clicks: 42
+
+    Analytics:
+      type: object
+      properties:
+        id:
+          type: string
+        shortCode:
+          type: string
+        clicks:
+          type: integer
+        referrers:
+          type: array
+          items:
+            type: object
+            properties:
+              referrer:
+                type: string
+              count:
+                type: integer
+        userAgents:
+          type: array
+          items:
+            type: object
+            properties:
+              userAgent:
+                type: string
+              count:
+                type: integer
+        ipAddresses:
+          type: array
+          items:
+            type: object
+            properties:
+              ipAddress:
+                type: string
+              count:
+                type: integer
+      example:
+        id: "123e4567-e89b-12d3-a456-426614174000"
+        shortCode: mylink
+        clicks: 42
+        referrers:
+          - referrer: https://twitter.com
+            count: 15
+          - referrer: https://facebook.com
+            count: 8
+
+    Stats:
+      type: object
+      properties:
+        totalUrls:
+          type: integer
+          description: Total number of short URLs created
+        totalClicks:
+          type: integer
+          description: Total number of redirects across all URLs
+        activeUrls:
+          type: integer
+          description: Number of non-expired URLs
+      example:
+        totalUrls: 150
+        totalClicks: 5000
+        activeUrls: 145
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      example:
+        error: This custom code is already taken

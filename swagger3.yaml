@@ -1,0 +1,939 @@
+openapi: 3.0.0
+info:
+  title: URL Shortener API
+  description: A comprehensive URL shortening service with advanced analytics, bulk operations, expiration management, and click tracking
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+    url: https://example.com/support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+  - url: https://staging-api.example.com
+    description: Staging server
+
+tags:
+  - name: URL Management
+    description: Operations for creating, retrieving, updating, and deleting short URLs
+  - name: Analytics
+    description: Detailed analytics and tracking data for short URLs with geographic and referrer information
+  - name: Statistics
+    description: Global service statistics and metrics
+  - name: Redirection
+    description: Public redirect endpoint for short codes with click tracking
+  - name: Maintenance
+    description: Administrative operations and cleanup tasks
+  - name: Validation
+    description: Utility endpoints for data validation
+
+paths:
+  /api/urls:
+    post:
+      summary: Create a new short URL
+      description: |
+        Creates a new short URL with optional custom code and expiration date.
+        The endpoint validates the original URL format and checks custom code availability.
+        Returns the created URL object with generated metadata.
+      operationId: createShortUrl
+      tags:
+        - URL Management
+      requestBody:
+        required: true
+        description: Short URL creation parameters
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUrlRequest'
+            examples:
+              basicUrl:
+                summary: Create URL with auto-generated code
+                value:
+                  originalUrl: https://www.example.com/very/long/url/path
+              customCodeUrl:
+                summary: Create URL with custom code
+                value:
+                  originalUrl: https://www.example.com/article/about-us
+                  customCode: about-us
+              expiringUrl:
+                summary: Create URL that expires in one month
+                value:
+                  originalUrl: https://www.example.com/limited-offer
+                  customCode: limited-offer
+                  expiresAt: "2025-12-31T23:59:59Z"
+      responses:
+        '201':
+          description: Short URL created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/URL'
+              examples:
+                basicResponse:
+                  summary: Auto-generated short code response
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    shortCode: abc123
+                    originalUrl: https://www.example.com/very/long/url/path
+                    clicks: 0
+                    createdAt: "2025-01-15T10:30:00Z"
+                    expiresAt: null
+                customCodeResponse:
+                  summary: Custom code response
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440001
+                    shortCode: about-us
+                    originalUrl: https://www.example.com/article/about-us
+                    clicks: 0
+                    createdAt: "2025-01-15T10:31:15Z"
+                    expiresAt: null
+        '400':
+          description: Validation error - Invalid input parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                invalidUrl:
+                  summary: Invalid URL format
+                  value:
+                    error: Please enter a valid URL
+                codeUnavailable:
+                  summary: Custom code already taken
+                  value:
+                    error: This custom code is already taken
+                invalidCode:
+                  summary: Invalid custom code format
+                  value:
+                    error: Only letters, numbers, hyphens and underscores allowed
+                codeLength:
+                  summary: Custom code length invalid
+                  value:
+                    error: Custom code must be at least 3 characters
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+    get:
+      summary: Retrieve all short URLs
+      description: |
+        Fetches a list of all short URLs in the system.
+        Returns URL data with complete metadata for each entry.
+      operationId: getAllUrls
+      tags:
+        - URL Management
+      responses:
+        '200':
+          description: Successfully retrieved all URLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/URL'
+              examples:
+                multipleUrls:
+                  summary: List of multiple URLs
+                  value:
+                    - id: 550e8400-e29b-41d4-a716-446655440000
+                      shortCode: page1
+                      originalUrl: https://example.com/page1
+                      clicks: 42
+                      createdAt: "2025-01-15T10:30:00Z"
+                      expiresAt: null
+                    - id: 550e8400-e29b-41d4-a716-446655440001
+                      shortCode: page2
+                      originalUrl: https://example.com/page2
+                      clicks: 156
+                      createdAt: "2025-01-14T09:15:00Z"
+                      expiresAt: "2025-12-31T23:59:59Z"
+                    - id: 550e8400-e29b-41d4-a716-446655440002
+                      shortCode: promoted
+                      originalUrl: https://example.com/promotions/winter-sale
+                      clicks: 892
+                      createdAt: "2025-01-10T14:22:00Z"
+                      expiresAt: null
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /api/urls/bulk:
+    post:
+      summary: Create multiple short URLs in bulk
+      description: |
+        Creates multiple short URLs in a single request (max 50 URLs per request).
+        All URLs are validated before creation. If any URL fails validation, 
+        the entire operation fails with detailed error information.
+      operationId: createBulkUrls
+      tags:
+        - URL Management
+      requestBody:
+        required: true
+        description: Array of short URLs to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkUrlRequest'
+            examples:
+              simpleBulk:
+                summary: Create 3 URLs without custom codes
+                value:
+                  urls:
+                    - originalUrl: https://example.com/article1
+                    - originalUrl: https://example.com/article2
+                    - originalUrl: https://example.com/article3
+              mixedBulk:
+                summary: Mix of custom codes and auto-generated codes
+                value:
+                  urls:
+                    - originalUrl: https://example.com/blog/post1
+                      customCode: blog-1
+                    - originalUrl: https://example.com/blog/post2
+                    - originalUrl: https://example.com/blog/post3
+                      customCode: blog-3
+                      expiresAt: "2025-12-31T23:59:59Z"
+      responses:
+        '201':
+          description: All URLs created successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/URL'
+              examples:
+                bulkSuccess:
+                  summary: Successfully created 3 URLs
+                  value:
+                    - id: 550e8400-e29b-41d4-a716-446655440000
+                      shortCode: auto001
+                      originalUrl: https://example.com/article1
+                      clicks: 0
+                      createdAt: "2025-01-15T10:30:00Z"
+                      expiresAt: null
+                    - id: 550e8400-e29b-41d4-a716-446655440001
+                      shortCode: auto002
+                      originalUrl: https://example.com/article2
+                      clicks: 0
+                      createdAt: "2025-01-15T10:30:01Z"
+                      expiresAt: null
+                    - id: 550e8400-e29b-41d4-a716-446655440002
+                      shortCode: blog-3
+                      originalUrl: https://example.com/blog/post3
+                      clicks: 0
+                      createdAt: "2025-01-15T10:30:02Z"
+                      expiresAt: "2025-12-31T23:59:59Z"
+        '400':
+          description: Validation error - Invalid input or duplicate codes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                duplicateCode:
+                  summary: Duplicate custom code
+                  value:
+                    error: This custom code is already taken
+                invalidUrl:
+                  summary: Invalid URL in one of the items
+                  value:
+                    error: Please enter a valid URL
+                tooManyUrls:
+                  summary: Too many URLs in request
+                  value:
+                    error: Maximum 50 URLs at once
+                emptyArray:
+                  summary: Empty URLs array
+                  value:
+                    error: At least one URL is required
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /api/urls/{id}:
+    get:
+      summary: Retrieve a specific short URL by ID
+      description: |
+        Fetches complete details of a short URL including all metadata,
+        click count, and expiration status.
+      operationId: getUrlById
+      tags:
+        - URL Management
+      parameters:
+        - $ref: '#/components/parameters/UrlId'
+      responses:
+        '200':
+          description: URL found and returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/URL'
+              examples:
+                activeUrl:
+                  summary: Active URL with clicks
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    shortCode: mylink
+                    originalUrl: https://www.example.com/very/long/url
+                    clicks: 42
+                    createdAt: "2025-01-15T10:30:00Z"
+                    expiresAt: "2025-12-31T23:59:59Z"
+                newUrl:
+                  summary: Newly created URL with no clicks
+                  value:
+                    id: 550e8400-e29b-41d4-a716-446655440003
+                    shortCode: fresh-link
+                    originalUrl: https://example.com/new-content
+                    clicks: 0
+                    createdAt: "2025-01-15T14:15:30Z"
+                    expiresAt: null
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+    delete:
+      summary: Delete a short URL
+      description: |
+        Permanently deletes a short URL and all associated click analytics data.
+        This action cannot be undone. Uses cascade delete to remove all related urlClicks records.
+      operationId: deleteUrl
+      tags:
+        - URL Management
+      parameters:
+        - $ref: '#/components/parameters/UrlId'
+      responses:
+        '204':
+          description: URL deleted successfully (no content returned)
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /api/urls/{id}/analytics:
+    get:
+      summary: Get detailed analytics for a specific short URL
+      description: |
+        Retrieves comprehensive analytics data including:
+        - Click history breakdown by day and hour
+        - Top referrers with click counts
+        - Geographic data (countries and cities)
+        - Recent click events with full details
+        - Overall URL metadata
+      operationId: getUrlAnalytics
+      tags:
+        - Analytics
+      parameters:
+        - $ref: '#/components/parameters/UrlId'
+      responses:
+        '200':
+          description: Analytics data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analytics'
+              example:
+                url:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  shortCode: mylink
+                  originalUrl: https://example.com/page
+                  clicks: 127
+                  createdAt: "2025-01-15T10:30:00Z"
+                  expiresAt: null
+                clicksByDay:
+                  - date: "2025-01-14"
+                    count: 45
+                  - date: "2025-01-15"
+                    count: 82
+                clicksByHour:
+                  - hour: 0
+                    count: 3
+                  - hour: 9
+                    count: 28
+                  - hour: 14
+                    count: 42
+                  - hour: 18
+                    count: 54
+                topReferrers:
+                  - referrer: https://twitter.com/search
+                    count: 58
+                  - referrer: https://facebook.com
+                    count: 42
+                  - referrer: null
+                    count: 27
+                topCountries:
+                  - country: United States
+                    count: 72
+                  - country: United Kingdom
+                    count: 31
+                  - country: Canada
+                    count: 24
+                recentClicks:
+                  - clickedAt: "2025-01-15T18:45:23Z"
+                    referrer: https://twitter.com
+                    country: United States
+                    city: San Francisco
+                  - clickedAt: "2025-01-15T18:43:12Z"
+                    referrer: null
+                    country: United Kingdom
+                    city: London
+                  - clickedAt: "2025-01-15T18:41:05Z"
+                    referrer: https://facebook.com
+                    country: Canada
+                    city: Toronto
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /api/stats:
+    get:
+      summary: Get global service statistics
+      description: |
+        Retrieves aggregate statistics about the entire URL shortener service.
+        Includes total URLs created, total clicks across all URLs, and 
+        information about the most popular URL.
+      operationId: getGlobalStats
+      tags:
+        - Statistics
+      responses:
+        '200':
+          description: Global statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stats'
+              example:
+                totalUrls: 1250
+                totalClicks: 45678
+                mostPopularUrl:
+                  shortCode: trending
+                  originalUrl: https://example.com/trending-article
+                  clicks: 892
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /api/check-code/{code}:
+    get:
+      summary: Check if a custom code is available
+      description: |
+        Validates whether a specific custom code is available for use.
+        Useful for checking availability before creating a URL with a custom code.
+        Returns a simple boolean indicating availability status.
+      operationId: checkCodeAvailability
+      tags:
+        - Validation
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: The custom code to check availability for
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{3,20}$'
+            minLength: 3
+            maxLength: 20
+          example: my-custom-code
+      responses:
+        '200':
+          description: Code availability check completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeAvailability'
+              examples:
+                available:
+                  summary: Code is available
+                  value:
+                    available: true
+                unavailable:
+                  summary: Code is already taken
+                  value:
+                    available: false
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /api/cleanup:
+    post:
+      summary: Clean up expired URLs
+      description: |
+        Runs a maintenance operation to remove expired URLs from the system.
+        This operation cannot be undone. All associated click data for 
+        expired URLs will also be deleted via cascade delete.
+      operationId: cleanupExpiredUrls
+      tags:
+        - Maintenance
+      responses:
+        '200':
+          description: Cleanup operation completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CleanupResult'
+              example:
+                cleaned: 23
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /{shortCode}:
+    get:
+      summary: Redirect to original URL using short code
+      description: |
+        Public redirect endpoint. When accessed with a valid short code,
+        automatically records click analytics including:
+        - Referrer (HTTP Referer/Referrer header)
+        - User Agent
+        - IP Address
+        - Geographic location (country and city via IP geolocation)
+        
+        Returns a 301 permanent redirect to the original URL.
+      operationId: redirectShortCode
+      tags:
+        - Redirection
+      parameters:
+        - name: shortCode
+          in: path
+          required: true
+          description: The short code to redirect (3-20 alphanumeric characters, hyphens, underscores)
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{3,20}$'
+            minLength: 3
+            maxLength: 20
+          example: abc123
+      responses:
+        '301':
+          description: |
+            Permanent redirect to the original URL.
+            Automatically records click event with referrer, user agent, IP address, 
+            and geolocation data. Click counter is incremented.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: The original URL to redirect to
+            Cache-Control:
+              schema:
+                type: string
+              description: Cache directive for the redirect
+              example: public, max-age=3600
+          content: {}
+        '404':
+          description: Short code not found or URL has expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+components:
+  parameters:
+    UrlId:
+      name: id
+      in: path
+      required: true
+      description: The unique UUID identifier of the short URL
+      schema:
+        type: string
+        format: uuid
+      example: 550e8400-e29b-41d4-a716-446655440000
+
+  schemas:
+    CreateUrlRequest:
+      type: object
+      required:
+        - originalUrl
+      properties:
+        originalUrl:
+          type: string
+          format: uri
+          description: The original long URL to be shortened (must be a valid URI with http/https)
+          example: https://www.example.com/very/long/url/path?param=value
+        customCode:
+          type: string
+          pattern: '^[A-Za-z0-9_-]+$'
+          minLength: 3
+          maxLength: 20
+          description: |
+            Optional custom short code.
+            Requirements:
+            - Must be 3-20 characters long
+            - Only letters (a-z, A-Z), numbers (0-9), hyphens (-), and underscores (_) allowed
+            - Must be unique across the system
+          example: my-custom-link
+        expiresAt:
+          type: string
+          format: date-time
+          description: |
+            Optional expiration date in ISO 8601 format.
+            After this timestamp, the URL becomes inaccessible and should be cleaned up.
+            If not provided, the URL never expires.
+          example: "2025-12-31T23:59:59Z"
+
+    BulkUrlRequest:
+      type: object
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          minItems: 1
+          maxItems: 50
+          description: |
+            Array of URLs to create in bulk.
+            - Minimum: 1 URL
+            - Maximum: 50 URLs per request
+          items:
+            type: object
+            required:
+              - originalUrl
+            properties:
+              originalUrl:
+                type: string
+                format: uri
+                description: The original long URL
+              customCode:
+                type: string
+                pattern: '^[A-Za-z0-9_-]+$'
+                minLength: 3
+                maxLength: 20
+                description: Optional custom short code
+              expiresAt:
+                type: string
+                format: date-time
+                description: Optional expiration date
+
+    URL:
+      type: object
+      description: A short URL record with click tracking metadata
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique UUID identifier for the short URL record
+          example: 550e8400-e29b-41d4-a716-446655440000
+        shortCode:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{3,20}$'
+          minLength: 3
+          maxLength: 20
+          description: The generated or custom short code used for redirection
+          example: abc123
+        originalUrl:
+          type: string
+          format: uri
+          description: The original long URL that the short code redirects to
+          example: https://www.example.com/very/long/url/path
+        clicks:
+          type: integer
+          minimum: 0
+          description: Total number of times this short URL has been clicked/redirected
+          example: 42
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the URL was created
+          example: "2025-01-15T10:30:00Z"
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            ISO 8601 timestamp of expiration.
+            Null if the URL never expires.
+            After this time, the URL becomes inaccessible.
+          example: "2025-12-31T23:59:59Z"
+
+    UrlClick:
+      type: object
+      description: Individual click event record with full tracking data
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique UUID identifier for this click event
+        urlId:
+          type: string
+          format: uuid
+          description: Reference to the URL that was clicked
+        clickedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when the click occurred
+        referrer:
+          type: string
+          nullable: true
+          description: |
+            HTTP Referer/Referrer header value from the click.
+            Null for direct traffic or when header is not sent.
+          example: https://twitter.com/search
+        userAgent:
+          type: string
+          nullable: true
+          description: |
+            User-Agent string from the request.
+            Contains information about browser, OS, and device.
+          example: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+        ipAddress:
+          type: string
+          format: ipv4
+          nullable: true
+          description: IP address of the client making the request
+          example: 192.168.1.1
+        country:
+          type: string
+          nullable: true
+          description: Country name derived from IP geolocation
+          example: United States
+        city:
+          type: string
+          nullable: true
+          description: City name derived from IP geolocation
+          example: San Francisco
+
+    Analytics:
+      type: object
+      description: Comprehensive analytics data for a specific short URL
+      properties:
+        url:
+          type: object
+          description: The short URL metadata
+          properties:
+            id:
+              type: string
+              format: uuid
+            shortCode:
+              type: string
+            originalUrl:
+              type: string
+              format: uri
+            clicks:
+              type: integer
+              minimum: 0
+            createdAt:
+              type: string
+              format: date-time
+            expiresAt:
+              type: string
+              format: date-time
+              nullable: true
+        clicksByDay:
+          type: array
+          description: |
+            Daily breakdown of clicks.
+            Shows click count for each day the URL was accessed.
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                description: Date in YYYY-MM-DD format
+              count:
+                type: integer
+                minimum: 0
+                description: Number of clicks on that day
+        clicksByHour:
+          type: array
+          description: |
+            Hourly breakdown of clicks (0-23).
+            Aggregates clicks across all days by hour of day.
+          items:
+            type: object
+            properties:
+              hour:
+                type: integer
+                minimum: 0
+                maximum: 23
+                description: Hour of day (0 = midnight, 23 = 11 PM)
+              count:
+                type: integer
+                minimum: 0
+                description: Total clicks during that hour
+        topReferrers:
+          type: array
+          description: |
+            Top 10 referrers by click count.
+            Null referrer indicates direct traffic.
+          items:
+            type: object
+            properties:
+              referrer:
+                type: string
+                nullable: true
+                description: HTTP Referer or null for direct traffic
+              count:
+                type: integer
+                minimum: 0
+                description: Number of clicks from this referrer
+        topCountries:
+          type: array
+          description: |
+            Top 20 countries by click count.
+            Derived from IP geolocation.
+          items:
+            type: object
+            properties:
+              country:
+                type: string
+                nullable: true
+                description: Country name or null if unable to geolocate
+              count:
+                type: integer
+                minimum: 0
+                description: Number of clicks from this country
+        recentClicks:
+          type: array
+          description: |
+            Most recent clicks (up to last 100).
+            Includes full click details with referrer, location, and timestamp.
+          items:
+            type: object
+            properties:
+              clickedAt:
+                type: string
+                format: date-time
+                description: When the click occurred
+              referrer:
+                type: string
+                nullable: true
+                description: HTTP Referer or null for direct traffic
+              country:
+                type: string
+                nullable: true
+                description: Country from geolocation
+              city:
+                type: string
+                nullable: true
+                description: City from geolocation
+
+    Stats:
+      type: object
+      description: Global service statistics aggregated across all URLs
+      properties:
+        totalUrls:
+          type: integer
+          minimum: 0
+          description: Total number of short URLs created in the system
+          example: 1250
+        totalClicks:
+          type: integer
+          minimum: 0
+          description: Total number of clicks across all URLs
+          example: 45678
+        mostPopularUrl:
+          type: object
+          nullable: true
+          description: |
+            The URL with the most clicks.
+            Null if no URLs exist in the system.
+          properties:
+            shortCode:
+              type: string
+              description: Short code of the most popular URL
+            originalUrl:
+              type: string
+              format: uri
+              description: Original URL
+            clicks:
+              type: integer
+              minimum: 0
+              description: Number of clicks on this URL
+
+    CodeAvailability:
+      type: object
+      description: Availability status of a custom short code
+      properties:
+        available:
+          type: boolean
+          description: Whether the custom code is available for use
+
+    CleanupResult:
+      type: object
+      description: Result of the expired URL cleanup operation
+      properties:
+        cleaned:
+          type: integer
+          minimum: 0
+          description: Number of expired URLs and their associated click records removed from the system
+
+    ValidationError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Detailed validation error message
+          example: Custom code must be at least 3 characters
+
+    NotFoundError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: URL not found
+
+    ServerError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Server error message
+          example: Failed to create short URL
